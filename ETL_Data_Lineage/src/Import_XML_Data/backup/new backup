@@ -1,0 +1,310 @@
+package Import_XML_Data;
+
+//https://www.mkyong.com/java/how-to-read-xml-file-in-java-dom-parser/
+// test file
+//
+// path XML object connector from root element
+//<POWERMART>
+//<REPOSITORY>
+//<FOLDER>
+//<MAPPING>
+//<CONNECTOR>
+//
+//CONNECTOR:
+//FROMFIELD, 
+//FROMINSTANCE, 
+//FROMINSTANCETYPE, 
+//TOFIELD, 
+//TOINSTANCE, 
+//TOINSTANCETYPE, 
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+
+import org.apache.poi.hssf.model.InternalWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Node;
+import org.w3c.dom.Element;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+public class Powercenter_XML_Import {
+	
+	private static final char DEFAULT_SEPARATOR = ',';
+	private static final String FILE_NAME = "C:/share/MyFirstRE_INSURANCE_LIFE.xls";
+	
+	@SuppressWarnings("deprecation")
+	
+	public static void main(String argv[]) {
+		List<String> ConnectionsFROMFIELD = 			new ArrayList<String>();
+		List<String> ConnectionsFROMINSTANCE = 			new ArrayList<String>();
+		List<String> ConnectionsFROMINSTANCETYPE = 		new ArrayList<String>();
+		List<String> ConnectionsTOFIELD = 				new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCE = 			new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCETYPE = 		new ArrayList<String>();
+		List<String> ConnectionsTOFIELD_PK1 = 			new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCE_PK1 = 		new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCETYPE_PK1 = 	new ArrayList<String>();
+		List<String> ConnectionsTOFIELD_PK2 = 			new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCE_PK2 = 		new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCETYPE_PK2 = 	new ArrayList<String>();
+		
+		List<String> ConnectionsOBJECTPORT = 			new ArrayList<String>();
+		List<String> ConnectionsOBJECTNAME = 			new ArrayList<String>();
+		List<String> ConnectionsOBJECTTYPE = 			new ArrayList<String>();
+
+        HSSFWorkbook workbook = new HSSFWorkbook();
+        HSSFSheet sheet = workbook.createSheet("Datatypes in Java");
+        
+        //XSSFWorkbook workbook = new XSSFWorkbook();
+        //name of excell sheet exceed 31 characters
+        //XSSFSheet sheet = workbook.createSheet("Datatypes in Java");
+        
+		String beginValueConnection = "Source Definition";
+		boolean connection_found = false;
+		boolean all_not_connected = false;
+		
+		int xml_left_offset = 2;
+		int xml_top_offset = 3;
+		
+		try {
+			File fXmlFile = new File("C:/ETL_WORFLOWS/REINS/wkf_RE_INSURANCE_LIFEJ.XML");
+			DocumentBuilderFactory dbFactory 	= DocumentBuilderFactory.newInstance();
+			DocumentBuilder dBuilder 			= dbFactory.newDocumentBuilder();
+			Document doc 						= dBuilder.parse(fXmlFile);
+
+			//optional, but recommended
+			//read this - http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
+			doc.getDocumentElement().normalize();
+
+			System.out.println("Root element :" + doc.getDocumentElement().getNodeName());
+
+			NodeList nList = doc.getElementsByTagName("CONNECTOR");
+
+			System.out.println("----------------------------");
+
+			
+			for (int temp = 0; temp < nList.getLength(); temp++) {
+
+				Node nNode = nList.item(temp);
+
+				//System.out.println("\nCurrent Element :" + nNode.getNodeName());
+				//all element is the XML file
+//-----------------------------------------------------------------------------
+//				load super table 		
+//-----------------------------------------------------------------------------							
+				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+					Element eElement = (Element) nNode;
+					ConnectionsFROMFIELD.add(eElement.getAttribute("FROMFIELD"));
+					ConnectionsFROMINSTANCE.add(eElement.getAttribute("FROMINSTANCE"));
+					ConnectionsFROMINSTANCETYPE.add(eElement.getAttribute("FROMINSTANCETYPE"));
+					ConnectionsTOFIELD.add(eElement.getAttribute("TOFIELD"));
+					ConnectionsTOINSTANCE.add(eElement.getAttribute("TOINSTANCE"));
+					ConnectionsTOINSTANCETYPE.add(eElement.getAttribute("TOINSTANCETYPE"));
+				}
+			}
+		    } catch (Exception e) {
+			e.printStackTrace();
+		    }
+			int Length_supertable = ConnectionsTOFIELD.size();
+			//System.out.println("length supertable : " +Length_supertable);
+//-----------------------------------------------------------------------------
+//			start of Recursive data		
+//-----------------------------------------------------------------------------			
+			String ConnectionINSTANCETYPE = beginValueConnection;
+			System.out.println("#1 FROMFIELD normal for loop");
+			int counter01 = xml_left_offset;
+			int counter02 = xml_top_offset;
+			for (int i = 0; i < ConnectionsFROMFIELD.size(); i++) {
+				//System.out.println(counter02);
+				if (ConnectionsFROMINSTANCETYPE.get(i).equals(ConnectionINSTANCETYPE)){
+					counter02=counter02+1;
+					System.out.println(" "+counter01+ " - "+counter02+DEFAULT_SEPARATOR+ConnectionsFROMFIELD.get(i)+DEFAULT_SEPARATOR+ConnectionsFROMINSTANCE.get(i)+DEFAULT_SEPARATOR+ConnectionsFROMINSTANCETYPE.get(i)+DEFAULT_SEPARATOR+ConnectionsTOFIELD.get(i)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCE.get(i)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCETYPE.get(i));				
+					Row r = sheet.getRow(counter02); // 1-16
+					if (r == null) {r = sheet.createRow(counter02);}
+					Cell c = r.getCell(counter01); // 0-3
+					if (c == null) {c = r.createCell(counter01, Cell.CELL_TYPE_NUMERIC);}
+					c.setCellValue(ConnectionsFROMFIELD.get(i));
+					Cell cc = r.getCell(counter01+1); // 0-3
+					if (cc == null) {cc = r.createCell(counter01+1, Cell.CELL_TYPE_NUMERIC);}
+					cc.setCellValue(ConnectionsFROMINSTANCE.get(i));
+					Cell ccc = r.getCell(counter01+2); // 0-3
+					if (ccc == null) {ccc = r.createCell(counter01+2, Cell.CELL_TYPE_NUMERIC);}
+					ccc.setCellValue(ConnectionsFROMINSTANCETYPE.get(i));
+					ConnectionsTOFIELD_PK1.add(ConnectionsTOFIELD.get(i));
+					ConnectionsTOINSTANCE_PK1.add(ConnectionsTOINSTANCE.get(i));
+					ConnectionsTOINSTANCETYPE_PK1.add(ConnectionsTOINSTANCETYPE.get(i));
+					ConnectionsOBJECTPORT.add("0");	
+					ConnectionsOBJECTPORT.add(""+i);	
+					ConnectionsOBJECTPORT.add(ConnectionsFROMFIELD.get(i));
+					ConnectionsOBJECTPORT.add("0");
+					ConnectionsOBJECTPORT.add(""+i);
+					ConnectionsOBJECTPORT.add(ConnectionsTOFIELD.get(i));
+					ConnectionsOBJECTNAME.add("0");					
+					ConnectionsOBJECTNAME.add(""+i);					
+					ConnectionsOBJECTNAME.add(ConnectionsFROMINSTANCE.get(i));
+					ConnectionsOBJECTNAME.add("0");					
+					ConnectionsOBJECTNAME.add(""+i);					
+					ConnectionsOBJECTNAME.add(ConnectionsTOINSTANCE.get(i));	
+					ConnectionsOBJECTTYPE.add("0");					
+					ConnectionsOBJECTTYPE.add(""+i);					
+					ConnectionsOBJECTTYPE.add(ConnectionsFROMINSTANCETYPE.get(i));
+					ConnectionsOBJECTTYPE.add("0");						
+					ConnectionsOBJECTTYPE.add(""+i);					
+					ConnectionsOBJECTTYPE.add(ConnectionsTOINSTANCETYPE.get(i));
+					}
+			}
+		
+//-----------------------------------------------------------------------------
+//			Recursive loop			
+//-----------------------------------------------------------------------------
+
+
+while (true){	
+	    counter02 = xml_top_offset;
+		counter01=counter01+3;
+		int foreign_key_subtable = ConnectionsTOFIELD_PK1.size();
+		System.out.println();
+			//System.out.println("foreign_key_subtabl : " +foreign_key_subtable);				
+			for (int l = 0; l < ConnectionsTOFIELD_PK1.size(); l++) {
+				for (int k = 0; k < ConnectionsTOFIELD.size(); k++) {
+				if (ConnectionsFROMFIELD.get(k).equals(ConnectionsTOFIELD_PK1.get(l)) &&
+					ConnectionsFROMINSTANCE.get(k).equals(ConnectionsTOINSTANCE_PK1.get(l)) &&
+					ConnectionsFROMINSTANCETYPE.get(k).equals(ConnectionsTOINSTANCETYPE_PK1.get(l))						
+					){
+					counter02=counter02+1;
+					System.out.println(" "+counter01+ " - "+counter02+DEFAULT_SEPARATOR+ConnectionsFROMFIELD.get(k)+DEFAULT_SEPARATOR+ConnectionsFROMINSTANCE.get(k)+DEFAULT_SEPARATOR+ConnectionsFROMINSTANCETYPE.get(k)+DEFAULT_SEPARATOR+ConnectionsTOFIELD.get(k)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCE.get(k)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCETYPE.get(k));
+					Row r = sheet.getRow(counter02); // 1-16
+					if (r == null) {r = sheet.createRow(counter02);}
+					Cell c = r.getCell(counter01); // 0-3
+					if (c == null) {c = r.createCell(counter01, Cell.CELL_TYPE_NUMERIC);}
+					c.setCellValue(ConnectionsFROMFIELD.get(k));
+					Cell cc = r.getCell(counter01+1); // 0-3
+					if (cc == null) {cc = r.createCell(counter01+1, Cell.CELL_TYPE_NUMERIC);}
+					cc.setCellValue(ConnectionsFROMINSTANCE.get(k));
+					Cell ccc = r.getCell(counter01+2); // 0-3
+					if (ccc == null) {ccc = r.createCell(counter01+2, Cell.CELL_TYPE_NUMERIC);}
+					ccc.setCellValue(ConnectionsFROMINSTANCETYPE.get(k));
+					ConnectionsTOFIELD_PK2.add(ConnectionsTOFIELD.get(k));
+					ConnectionsTOINSTANCE_PK2.add(ConnectionsTOINSTANCE.get(k));
+					ConnectionsTOINSTANCETYPE_PK2.add(ConnectionsTOINSTANCETYPE.get(k));
+					ConnectionsOBJECTPORT.add(""+counter01);		
+					ConnectionsOBJECTPORT.add(""+k);							
+					ConnectionsOBJECTPORT.add(ConnectionsFROMFIELD.get(k));
+					ConnectionsOBJECTPORT.add(""+counter01);
+					ConnectionsOBJECTPORT.add(""+k);
+					ConnectionsOBJECTPORT.add(ConnectionsTOFIELD.get(k));					
+					ConnectionsOBJECTNAME.add(""+counter01);
+					ConnectionsOBJECTNAME.add(""+k);
+					ConnectionsOBJECTNAME.add(ConnectionsFROMINSTANCE.get(k));
+					ConnectionsOBJECTNAME.add(""+counter01);
+					ConnectionsOBJECTNAME.add(""+k);
+					ConnectionsOBJECTNAME.add(ConnectionsTOINSTANCE.get(k));
+					ConnectionsOBJECTTYPE.add(""+counter01);
+					ConnectionsOBJECTTYPE.add(""+k);
+					ConnectionsOBJECTTYPE.add(ConnectionsFROMINSTANCETYPE.get(k));
+					ConnectionsOBJECTTYPE.add(""+counter01);	
+					ConnectionsOBJECTTYPE.add(""+k);	
+					ConnectionsOBJECTTYPE.add(ConnectionsTOINSTANCETYPE.get(k));
+					connection_found = true;
+					}
+				
+				}
+				if(!connection_found)
+				{
+					counter02=counter02+1;
+					//System.out.println("   -- "+counter02);
+					System.out.println(" "+counter01+ " - "+counter02+DEFAULT_SEPARATOR+ConnectionsTOFIELD_PK1.get(l)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCE_PK1.get(l)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCETYPE_PK1.get(l)+DEFAULT_SEPARATOR+"NOT CONNECTED"+DEFAULT_SEPARATOR+"NOT CONNECTED"+DEFAULT_SEPARATOR+"NOT CONNECTED");
+					Row r = sheet.getRow(counter02); // 1-16
+					if (r == null) {r = sheet.createRow(counter02);}
+					Cell c = r.getCell(counter01); // 0-3
+					if (c == null) {c = r.createCell(counter01, Cell.CELL_TYPE_NUMERIC);}
+					c.setCellValue(ConnectionsTOFIELD_PK1.get(l));
+					Cell cc = r.getCell(counter01+1); // 0-3
+					if (cc == null) {cc = r.createCell(counter01+1, Cell.CELL_TYPE_NUMERIC);}
+					cc.setCellValue(ConnectionsTOINSTANCE_PK1.get(l));
+					Cell ccc = r.getCell(counter01+2); // 0-3
+					if (ccc == null) {ccc = r.createCell(counter01+2, Cell.CELL_TYPE_NUMERIC);}
+					ccc.setCellValue(ConnectionsTOINSTANCETYPE_PK1.get(l));
+					ConnectionsTOFIELD_PK2.add("NOT CONNECTED");
+					ConnectionsTOINSTANCE_PK2.add("NOT CONNECTED");
+					ConnectionsTOINSTANCETYPE_PK2.add("NOT CONNECTED");
+				}
+				connection_found = false;
+			}	
+			
+			
+			
+			ConnectionsTOFIELD_PK1.clear();
+			ConnectionsTOINSTANCE_PK1.clear();
+			ConnectionsTOINSTANCETYPE_PK1.clear();
+			for (int c = 0; c < ConnectionsTOFIELD_PK2.size(); c++) {
+				ConnectionsTOFIELD_PK1.add(ConnectionsTOFIELD_PK2.get(c));
+				ConnectionsTOINSTANCE_PK1.add(ConnectionsTOINSTANCE_PK2.get(c));
+				ConnectionsTOINSTANCETYPE_PK1.add(ConnectionsTOINSTANCETYPE_PK2.get(c));
+			};
+			ConnectionsTOFIELD_PK2.clear();
+			ConnectionsTOINSTANCE_PK2.clear();
+			ConnectionsTOINSTANCETYPE_PK2.clear();
+			
+			System.out.println("   -- start end of recusive loop");
+			all_not_connected = false;
+			
+			int occurrences = Collections.frequency(ConnectionsTOFIELD_PK1, "NOT CONNECTED");
+			int allconnectors = ConnectionsTOFIELD_PK1.size();
+			
+			if(occurrences == allconnectors){
+				System.out.println(" ********* occurrences:" + occurrences + "allconnectors :" + allconnectors);
+				all_not_connected = true;
+				}
+				
+			if (all_not_connected){
+			//if (ConnectionsTOFIELD_PK1.size()==0){
+				System.out.println("   -- !!!!!!!!!!!!!!jump out!!!!!!!!!!!!!!!! --");
+				break;
+			}
+			
+	} // While
+			
+//-----------------------------------------------------------------------------
+//				EINDE Recursive loop			
+//-----------------------------------------------------------------------------
+try {
+    FileOutputStream outputStream = new FileOutputStream(FILE_NAME);
+	for (int i = 0; i < sheet.getRow(sheet.getLastRowNum()).getPhysicalNumberOfCells()+2 ; ++i) {
+		sheet.autoSizeColumn(i);
+	}
+	workbook.write(outputStream); 
+    workbook.close();
+    System.out.println("excel file created");
+} catch (FileNotFoundException e) {
+    e.printStackTrace();
+} catch (IOException e) {
+    e.printStackTrace();
+}
+		//System.out.println(ConnectionsOBJECTPORT);
+		//System.out.println(ConnectionsOBJECTNAME);
+		//System.out.println(ConnectionsOBJECTTYPE);
+
+
+   } //main function
+	
+} //class
+	

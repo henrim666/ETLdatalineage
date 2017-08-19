@@ -1,0 +1,785 @@
+package Import_XML_Data;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+
+import org.apache.poi.hssf.usermodel.HSSFCellStyle;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.RegionUtil;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Node;
+import org.w3c.dom.Element;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Powercenter_XML_Import {
+	
+	private static final char DEFAULT_SEPARATOR = ',';
+	//private static final String FILE_NAME = "C:/share/MyFirstRE_INSURANCE_LIFE.xls";
+	//normal 1 : 1
+	private static final String FILE_NAME = "C:/share/MyFirstAlchemy_LIFE.xls";
+	private static final String FILE_NAMETEST = "C:/share/MyTEST_LIFE.xls";
+
+	private static final int ROW_HEADER_MAPPING_TITLE = 1;
+	private static final int ROW_HEADER_MAPPING_HEADER_WORKFLOWS = 2;
+	private static final String ROW_HEADER_MAPPING_HEADER_WORKFLOWS_STR = "Folder,Workflow,Session,Mapping";
+	private static final int ROW_HEADER_MAPPING_DATA_WORKFLOWS = 3;
+	private static final int ROW_HEADER_MAPPING_OUTLINE = 4;
+	private static final int ROW_HEADER_MAPPING_PARAMETER_FILE = 5;
+	private static final int ROW_HEADER_MAPPING_HEADER_SOURCE_TARGET = 6;
+	private static final String ROW_HEADER_MAPPING_HEADER_SOURCE_TARGET_STR = "TableName / FileName, Type, Connector, Comments";	
+	private static final int ROW_HEADER_MAPPING_SOURCES= 7;
+	private static final int ROW_HEADER_MAPPING_TARGETS = 8;
+	private static final int ROW_HEADER_MAPPING_JOIN_FILTER_CONDITION = 9;
+	private static final int ROW_HEADER_MAPPING_JOIN_SOURCE_EXTRACTION = 10;
+	private static final int ROW_HEADER_MAPPING_PRESQL = 11;
+	private static final int ROW_HEADER_MAPPING_POSTSQL = 12;
+	private static final int ROW_HEADER_MAPPING_COMMENT = 13;
+	
+	private static final int ROW_HEADER_DATA_TITLE = 14;
+
+
+	
+	// not normal 1 : 1 this one has exp outputport has o_ lead in front of name
+	
+	@SuppressWarnings("deprecation")
+	
+	public static void main(String argv[]) {
+		List<String> ConnectionsFROMFIELD = 			new ArrayList<String>();
+		List<String> ConnectionsFROMINSTANCE = 			new ArrayList<String>();
+		List<String> ConnectionsFROMINSTANCETYPE = 		new ArrayList<String>();
+		List<String> ConnectionsTOFIELD = 				new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCE = 			new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCETYPE = 		new ArrayList<String>();
+		List<String> ConnectionsTOFIELD_PK1 = 			new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCE_PK1 = 		new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCETYPE_PK1 = 	new ArrayList<String>();
+		List<String> ConnectionsTOFIELD_PK2 = 			new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCE_PK2 = 		new ArrayList<String>();
+		List<String> ConnectionsTOINSTANCETYPE_PK2 = 	new ArrayList<String>();
+		
+		List<String> ConnectionsOBJECTPORT = 			new ArrayList<String>();
+		List<String> ConnectionsOBJECTNAME = 			new ArrayList<String>();
+		List<String> ConnectionsOBJECTTYPE = 			new ArrayList<String>();
+		
+		List<String> RepositoryName = 			new ArrayList<String>();
+		List<String> FolderNAME     = 			new ArrayList<String>();
+		List<String> WorkflowNAME   = 			new ArrayList<String>();
+		List<String> WorkflowDESCRIPTION   = 			new ArrayList<String>();		
+		List<String> SessionNAME    = 			new ArrayList<String>();
+		List<String> MappingNAME    = 			new ArrayList<String>();
+		
+        HSSFWorkbook workbook = new HSSFWorkbook();
+        HSSFSheet sheet = workbook.createSheet("Datatypes in Java");
+        //name of excell sheet exceed 31 characters
+		String beginValueConnection = "Source Definition";
+		boolean connection_found = false;
+		boolean all_not_connected = false;
+		
+		int xml_left_offset = 1;
+		int xml_top_offset = 16;
+		
+		try {
+			File fXmlFile = new File("C:/ETL_WORFLOWS/REINS/wkf_RE_INSURANCE_LIFEJ.XML");
+			//File fXmlFile = new File("C:/ETL_WORFLOWS/AlCHEMY/wkf_Alchemy.XML");
+
+			DocumentBuilderFactory dbFactory 	= DocumentBuilderFactory.newInstance();
+			DocumentBuilder dBuilder 			= dbFactory.newDocumentBuilder();
+			Document doc 						= dBuilder.parse(fXmlFile);
+
+			doc.getDocumentElement().normalize();
+			System.out.println("Root element :" + doc.getDocumentElement().getNodeName());
+			NodeList nList = doc.getElementsByTagName("REPOSITORY");
+			System.out.println("----------------------------");
+			
+			
+			//System.out.println(nList.getAttributes().getNamedItem("Parameter Filename").getNodeValue());
+			//String parameterfile = nList.getAttribute("Parameter Filename");
+			
+			System.out.println(" test object as string : "+doc);
+			
+			System.out.println("----------------------------");
+			
+			for (int temp = 0; temp < nList.getLength(); temp++) {
+				Node nNode = nList.item(temp);
+				System.out.println("\nCurrent Element :" + nNode.getNodeName());
+				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+					Element eElement = (Element) nNode;
+					System.out.println("\nCurrent Element :" + eElement.getAttribute("NAME"));
+					RepositoryName.add(eElement.getAttribute("NAME"));
+				}
+			}
+			nList = doc.getElementsByTagName("FOLDER");
+			System.out.println("----------------------------");
+
+			for (int temp = 0; temp < nList.getLength(); temp++) {
+				Node nNode = nList.item(temp);
+				System.out.println("\nCurrent Element :" + nNode.getNodeName());
+				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+					Element eElement = (Element) nNode;					
+					System.out.println("\nCurrent Element :" + eElement.getAttribute("NAME"));
+					FolderNAME.add(eElement.getAttribute("NAME"));
+				}
+			}
+			nList = doc.getElementsByTagName("WORKFLOW");
+			System.out.println("----------------------------");
+
+			for (int temp = 0; temp < nList.getLength(); temp++) {
+				Node nNode = nList.item(temp);
+				System.out.println("\nCurrent Element :" + nNode.getNodeName());
+				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+					Element eElement = (Element) nNode;					
+					System.out.println("\nCurrent Element :" + eElement.getAttribute("NAME"));
+					WorkflowNAME.add(eElement.getAttribute("NAME"));
+					System.out.println("\nCurrent Element :" + eElement.getAttribute("DESCRIPTION"));
+					WorkflowDESCRIPTION.add(eElement.getAttribute("DESCRIPTION"));
+					
+				}
+			}					
+			nList = doc.getElementsByTagName("SESSION");
+			System.out.println("----------------------------");
+
+			for (int temp = 0; temp < nList.getLength(); temp++) {
+				Node nNode = nList.item(temp);
+				System.out.println("\nCurrent Element :" + nNode.getNodeName());
+				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+					Element eElement = (Element) nNode;					
+					System.out.println("\nCurrent Element :" + eElement.getAttribute("NAME"));
+					SessionNAME.add(eElement.getAttribute("NAME"));
+					System.out.println("\nCurrent Element :" + eElement.getAttribute("MAPPINGNAME"));
+					MappingNAME.add(eElement.getAttribute("MAPPINGNAME"));
+				}
+			}
+			nList = doc.getElementsByTagName("CONNECTOR");
+			System.out.println("----------------------------");
+
+			
+			for (int temp = 0; temp < nList.getLength(); temp++) {
+				Node nNode = nList.item(temp);
+//-----------------------------------------------------------------------------
+//				load super table 		
+//-----------------------------------------------------------------------------							
+				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+					Element eElement = (Element) nNode;
+					Element mElement = (Element) nNode.getParentNode();	
+					MappingNAME.add(mElement.getAttribute("NAME"));
+					ConnectionsFROMFIELD.add(eElement.getAttribute("FROMFIELD"));
+					ConnectionsFROMINSTANCE.add(eElement.getAttribute("FROMINSTANCE"));
+					ConnectionsFROMINSTANCETYPE.add(eElement.getAttribute("FROMINSTANCETYPE"));
+					ConnectionsTOFIELD.add(eElement.getAttribute("TOFIELD"));
+					ConnectionsTOINSTANCE.add(eElement.getAttribute("TOINSTANCE"));
+					ConnectionsTOINSTANCETYPE.add(eElement.getAttribute("TOINSTANCETYPE"));
+				}
+			}
+		    } catch (Exception e) {
+			e.printStackTrace();
+		    }
+//-----------------------------------------------------------------------------
+//			start of Recursive data		
+//-----------------------------------------------------------------------------			
+			String ConnectionINSTANCETYPE = beginValueConnection;
+			System.out.println("#1 FROMFIELD normal for loop");
+			int counter01 = xml_left_offset;
+			int counter02 = xml_top_offset;
+			int excelcounter01 = xml_top_offset;
+			for (int i = 0; i < ConnectionsFROMFIELD.size(); i++) {
+				if (ConnectionsFROMINSTANCETYPE.get(i).equals(ConnectionINSTANCETYPE)){
+					counter02=counter02+1;
+					excelcounter01 = excelcounter01 + 1;
+					System.out.println(" "+ MappingNAME.get(i) + DEFAULT_SEPARATOR+ConnectionsFROMFIELD.get(i)+DEFAULT_SEPARATOR+ConnectionsFROMINSTANCE.get(i)+DEFAULT_SEPARATOR+ConnectionsFROMINSTANCETYPE.get(i)+DEFAULT_SEPARATOR+ConnectionsTOFIELD.get(i)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCE.get(i)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCETYPE.get(i));				
+					Row r = sheet.getRow(counter02); // 1-16
+					if (r == null) {r = sheet.createRow(counter02);}
+					Cell c = r.getCell(counter01); // 0-3
+					if (c == null) {c = r.createCell(counter01, Cell.CELL_TYPE_NUMERIC);}
+					c.setCellValue(ConnectionsFROMFIELD.get(i));
+					Cell cc = r.getCell(counter01+1); // 0-3
+					if (cc == null) {cc = r.createCell(counter01+1, Cell.CELL_TYPE_NUMERIC);}
+					cc.setCellValue(ConnectionsFROMINSTANCE.get(i));
+					Cell ccc = r.getCell(counter01+2); // 0-3
+					if (ccc == null) {ccc = r.createCell(counter01+2, Cell.CELL_TYPE_NUMERIC);}
+					ccc.setCellValue(ConnectionsFROMINSTANCETYPE.get(i));
+					ConnectionsTOFIELD_PK1.add(ConnectionsTOFIELD.get(i));
+					ConnectionsTOINSTANCE_PK1.add(ConnectionsTOINSTANCE.get(i));
+					ConnectionsTOINSTANCETYPE_PK1.add(ConnectionsTOINSTANCETYPE.get(i));
+					ConnectionsOBJECTPORT.add("" + counter01);	
+					ConnectionsOBJECTPORT.add(""+excelcounter01);	
+					ConnectionsOBJECTPORT.add(ConnectionsFROMFIELD.get(i));
+					ConnectionsOBJECTNAME.add("" + (counter01 + 1));					
+					ConnectionsOBJECTNAME.add(""+excelcounter01);					
+					ConnectionsOBJECTNAME.add(ConnectionsFROMINSTANCE.get(i));
+					ConnectionsOBJECTTYPE.add("" + (counter01 + 2));					
+					ConnectionsOBJECTTYPE.add(""+excelcounter01);					
+					ConnectionsOBJECTTYPE.add(ConnectionsFROMINSTANCETYPE.get(i));
+
+					}
+			}
+//-----------------------------------------------------------------------------
+//			Recursive loop			
+//-----------------------------------------------------------------------------
+while (true){	
+	    counter02 = xml_top_offset;
+		counter01=counter01+3;
+		excelcounter01 = xml_top_offset;
+		//System.out.println();
+				for (int l = 0; l < ConnectionsTOFIELD_PK1.size(); l++) {
+				for (int k = 0; k < ConnectionsTOFIELD.size(); k++) {
+				if (ConnectionsFROMFIELD.get(k).equals(ConnectionsTOFIELD_PK1.get(l)) &&
+					ConnectionsFROMINSTANCE.get(k).equals(ConnectionsTOINSTANCE_PK1.get(l)) &&
+					ConnectionsFROMINSTANCETYPE.get(k).equals(ConnectionsTOINSTANCETYPE_PK1.get(l))						
+					){
+					counter02=counter02+1;
+					excelcounter01 = excelcounter01 + 1;
+					System.out.println(" "+ MappingNAME.get(k) + DEFAULT_SEPARATOR+ConnectionsFROMFIELD.get(k)+DEFAULT_SEPARATOR+ConnectionsFROMINSTANCE.get(k)+DEFAULT_SEPARATOR+ConnectionsFROMINSTANCETYPE.get(k)+DEFAULT_SEPARATOR+ConnectionsTOFIELD.get(k)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCE.get(k)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCETYPE.get(k));
+					Row r = sheet.getRow(counter02); // 1-16
+					if (r == null) {r = sheet.createRow(counter02);}
+					Cell c = r.getCell(counter01); // 0-3
+					if (c == null) {c = r.createCell(counter01, Cell.CELL_TYPE_NUMERIC);}
+					c.setCellValue(ConnectionsFROMFIELD.get(k));
+					Cell cc = r.getCell(counter01+1); // 0-3
+					if (cc == null) {cc = r.createCell(counter01+1, Cell.CELL_TYPE_NUMERIC);}
+					cc.setCellValue(ConnectionsFROMINSTANCE.get(k));
+					Cell ccc = r.getCell(counter01+2); // 0-3
+					if (ccc == null) {ccc = r.createCell(counter01+2, Cell.CELL_TYPE_NUMERIC);}
+					ccc.setCellValue(ConnectionsFROMINSTANCETYPE.get(k));
+					ConnectionsTOFIELD_PK2.add(ConnectionsTOFIELD.get(k));
+					ConnectionsTOINSTANCE_PK2.add(ConnectionsTOINSTANCE.get(k));
+					ConnectionsTOINSTANCETYPE_PK2.add(ConnectionsTOINSTANCETYPE.get(k));
+					ConnectionsOBJECTPORT.add(""+counter01);		
+					ConnectionsOBJECTPORT.add(""+excelcounter01);							
+					ConnectionsOBJECTPORT.add(ConnectionsFROMFIELD.get(k));				
+					ConnectionsOBJECTNAME.add(""+(counter01+1));
+					ConnectionsOBJECTNAME.add(""+excelcounter01);
+					ConnectionsOBJECTNAME.add(ConnectionsFROMINSTANCE.get(k));
+					ConnectionsOBJECTTYPE.add(""+(counter01+2));
+					ConnectionsOBJECTTYPE.add(""+excelcounter01);
+					ConnectionsOBJECTTYPE.add(ConnectionsFROMINSTANCETYPE.get(k));
+					connection_found = true;
+					}
+				}
+				if(!connection_found)
+				{
+					counter02=counter02+1;
+					excelcounter01 = excelcounter01 + 1;
+					CellStyle style = workbook.createCellStyle();
+					style = workbook.createCellStyle();
+				    style.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
+				    style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+					System.out.println(" "+ MappingNAME.get(l) + DEFAULT_SEPARATOR+ConnectionsTOFIELD_PK1.get(l)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCE_PK1.get(l)+DEFAULT_SEPARATOR+ConnectionsTOINSTANCETYPE_PK1.get(l)+DEFAULT_SEPARATOR+"NOT CONNECTED"+DEFAULT_SEPARATOR+"NOT CONNECTED"+DEFAULT_SEPARATOR+"NOT CONNECTED");
+					Row r = sheet.getRow(counter02); // 1-16
+					if (r == null) {r = sheet.createRow(counter02);}
+					Cell c = r.getCell(counter01); // 0-3
+					if (c == null) {c = r.createCell(counter01, Cell.CELL_TYPE_NUMERIC);}
+					c.setCellValue(ConnectionsTOFIELD_PK1.get(l));
+					if (ConnectionsTOFIELD_PK1.get(l).equals("NOT CONNECTED")){
+						c.setCellStyle(style);
+					}
+					Cell cc = r.getCell(counter01+1); // 0-3
+					if (cc == null) {cc = r.createCell(counter01+1, Cell.CELL_TYPE_NUMERIC);}
+					cc.setCellValue(ConnectionsTOINSTANCE_PK1.get(l));
+					if (ConnectionsTOINSTANCE_PK1.get(l).equals("NOT CONNECTED")){
+						cc.setCellStyle(style);
+					}
+					Cell ccc = r.getCell(counter01+2); // 0-3
+					if (ccc == null) {ccc = r.createCell(counter01+2, Cell.CELL_TYPE_NUMERIC);}
+					ccc.setCellValue(ConnectionsTOINSTANCETYPE_PK1.get(l));
+					if (ConnectionsTOINSTANCETYPE_PK1.get(l).equals("NOT CONNECTED")){
+					ccc.setCellStyle(style);
+					}
+					ConnectionsOBJECTPORT.add(""+(counter01));
+					ConnectionsOBJECTPORT.add(""+excelcounter01);
+					ConnectionsOBJECTPORT.add(ConnectionsTOFIELD_PK1.get(l));					
+
+					ConnectionsOBJECTNAME.add(""+(counter01+1));
+					ConnectionsOBJECTNAME.add(""+excelcounter01);
+					ConnectionsOBJECTNAME.add(ConnectionsTOINSTANCE_PK1.get(l));
+					
+					ConnectionsOBJECTTYPE.add(""+(counter01+2));	
+					ConnectionsOBJECTTYPE.add(""+excelcounter01);	
+					ConnectionsOBJECTTYPE.add(ConnectionsTOINSTANCETYPE_PK1.get(l));
+					
+					ConnectionsTOFIELD_PK2.add("NOT CONNECTED");
+					ConnectionsTOINSTANCE_PK2.add("NOT CONNECTED");
+					ConnectionsTOINSTANCETYPE_PK2.add("NOT CONNECTED");
+				}
+				connection_found = false;
+			}	
+			
+			ConnectionsTOFIELD_PK1.clear();
+			ConnectionsTOINSTANCE_PK1.clear();
+			ConnectionsTOINSTANCETYPE_PK1.clear();
+			for (int c = 0; c < ConnectionsTOFIELD_PK2.size(); c++) {
+				ConnectionsTOFIELD_PK1.add(ConnectionsTOFIELD_PK2.get(c));
+				ConnectionsTOINSTANCE_PK1.add(ConnectionsTOINSTANCE_PK2.get(c));
+				ConnectionsTOINSTANCETYPE_PK1.add(ConnectionsTOINSTANCETYPE_PK2.get(c));
+			};
+			ConnectionsTOFIELD_PK2.clear();
+			ConnectionsTOINSTANCE_PK2.clear();
+			ConnectionsTOINSTANCETYPE_PK2.clear();
+			
+			System.out.println("   -- start end of recusive loop");
+			all_not_connected = false;
+			
+			int occurrences = Collections.frequency(ConnectionsTOFIELD_PK1, "NOT CONNECTED");
+			int allconnectors = ConnectionsTOFIELD_PK1.size();
+			
+			if(occurrences == allconnectors){
+				System.out.println(" ********* occurrences:" + occurrences + "allconnectors :" + allconnectors);
+				all_not_connected = true;
+				}
+				
+			if (all_not_connected){
+				System.out.println("   -- !!!!!!!!!!!!!!jump out!!!!!!!!!!!!!!!! --");
+				break;
+			}
+	} // While
+//-----------------------------------------------------------------------------
+//				EINDE Recursive loop			
+//-----------------------------------------------------------------------------
+try {
+    FileOutputStream outputStream = new FileOutputStream(FILE_NAME);
+	for (int i = 0; i < sheet.getRow(sheet.getLastRowNum()).getPhysicalNumberOfCells()+2 ; ++i) {
+		sheet.autoSizeColumn(i);
+	}
+	workbook.write(outputStream); 
+    workbook.close();
+    System.out.println("excel file created");
+} catch (FileNotFoundException e) {
+    e.printStackTrace();
+} catch (IOException e) {
+    e.printStackTrace();
+}
+		System.out.println("creating excel test file");
+		HSSFWorkbook workbooktest = new HSSFWorkbook();
+        HSSFSheet sheettest = workbooktest.createSheet("Datatypes in Java");
+        int MaxRowNumber = 0;
+        for (int i = 0; i < ConnectionsOBJECTPORT.size(); i=i+3) {
+        	if (Integer.parseInt(ConnectionsOBJECTPORT.get(i+1)) > MaxRowNumber) {MaxRowNumber = Integer.parseInt(ConnectionsOBJECTPORT.get(i+1));};
+        	if (Integer.parseInt(ConnectionsOBJECTNAME.get(i+1)) > MaxRowNumber) {MaxRowNumber = Integer.parseInt(ConnectionsOBJECTNAME.get(i+1));};
+        	if (Integer.parseInt(ConnectionsOBJECTTYPE.get(i+1)) > MaxRowNumber) {MaxRowNumber = Integer.parseInt(ConnectionsOBJECTTYPE.get(i+1));};
+        }
+        MaxRowNumber=MaxRowNumber+1;
+        System.out.println("max row number : "+MaxRowNumber );
+ 
+        int MaxColumnCheck = 0;
+        for (int i = 0; i < ConnectionsOBJECTPORT.size(); i=i+3) {
+        	if (Integer.parseInt(ConnectionsOBJECTPORT.get(i)) > MaxColumnCheck) {MaxColumnCheck = Integer.parseInt(ConnectionsOBJECTPORT.get(i));};
+        	if (Integer.parseInt(ConnectionsOBJECTNAME.get(i)) > MaxColumnCheck) {MaxColumnCheck = Integer.parseInt(ConnectionsOBJECTNAME.get(i));};
+        	if (Integer.parseInt(ConnectionsOBJECTTYPE.get(i)) > MaxColumnCheck) {MaxColumnCheck = Integer.parseInt(ConnectionsOBJECTTYPE.get(i));};
+        }
+        int MaxColumnNumber=MaxColumnCheck;
+        System.out.println("max column number : "+MaxColumnNumber );
+        if (MaxColumnNumber<11){
+        	MaxColumnNumber = 12;
+        }
+        
+        System.out.println("ConnectionsOBJECTPORT.size : "+ConnectionsOBJECTPORT.size() );
+        
+        int one_fourt_div = ((MaxColumnNumber-((MaxColumnNumber-1) % 4))/4);
+        int one_fourt_rest = ((MaxColumnNumber-1) % 4) ;
+
+		CellStyle stylenormal = workbooktest.createCellStyle();
+		stylenormal = workbooktest.createCellStyle();
+		stylenormal.setBorderBottom(CellStyle.BORDER_THIN);
+		stylenormal.setBorderTop(CellStyle.BORDER_THIN);
+		stylenormal.setBorderRight(CellStyle.BORDER_THIN);
+		stylenormal.setBorderLeft(CellStyle.BORDER_THIN);
+        
+		CellStyle styletest = workbooktest.createCellStyle();
+		styletest = workbooktest.createCellStyle();
+	    styletest.setFillForegroundColor(IndexedColors.RED.getIndex());
+	    styletest.setFillPattern(CellStyle.SOLID_FOREGROUND);	
+	    styletest.setBorderBottom(CellStyle.BORDER_THIN);
+	    styletest.setBorderTop(CellStyle.BORDER_THIN);
+	    styletest.setBorderRight(CellStyle.BORDER_THIN);
+	    styletest.setBorderLeft(CellStyle.BORDER_THIN);
+	    
+	    CellStyle stylecenterSH = workbooktest.createCellStyle();
+	    stylecenterSH.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+	    stylecenterSH.setVerticalAlignment(HSSFCellStyle.VERTICAL_CENTER);
+	    stylecenterSH.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+	    stylecenterSH.setFillPattern(CellStyle.SOLID_FOREGROUND);
+	    stylecenterSH.setBorderBottom(CellStyle.BORDER_THIN);
+	    stylecenterSH.setBorderTop(CellStyle.BORDER_THIN);
+	    stylecenterSH.setBorderRight(CellStyle.BORDER_THIN);
+	    stylecenterSH.setBorderLeft(CellStyle.BORDER_THIN);
+
+	    CellStyle stylecenter = workbooktest.createCellStyle();
+	    stylecenter.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+	    stylecenter.setVerticalAlignment(HSSFCellStyle.VERTICAL_CENTER);
+	    stylecenter.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
+	    stylecenter.setFillPattern(CellStyle.SOLID_FOREGROUND);
+	    stylecenter.setBorderBottom(CellStyle.BORDER_THIN);
+	    stylecenter.setBorderTop(CellStyle.BORDER_THIN);
+	    stylecenter.setBorderRight(CellStyle.BORDER_THIN);
+	    stylecenter.setBorderLeft(CellStyle.BORDER_THIN);
+	    
+	    Font font_header = workbooktest.createFont();
+	    font_header.setFontHeightInPoints((short)12);
+	    font_header.setFontName("Arial");
+	    stylecenter.setFont(font_header);
+
+	    CellStyle style_Data_Header = workbooktest.createCellStyle();
+	    style_Data_Header.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+	    style_Data_Header.setVerticalAlignment(HSSFCellStyle.VERTICAL_CENTER);
+	    style_Data_Header.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+	    style_Data_Header.setFillPattern(CellStyle.SOLID_FOREGROUND);
+	    style_Data_Header.setBorderBottom(CellStyle.BORDER_THIN);
+	    style_Data_Header.setBorderTop(CellStyle.BORDER_THIN);
+	    style_Data_Header.setBorderRight(CellStyle.BORDER_THIN);
+	    style_Data_Header.setBorderLeft(CellStyle.BORDER_THIN);
+	    
+	    Font font_Data_Header = workbooktest.createFont();
+	    font_Data_Header.setFontHeightInPoints((short)12);
+	    font_Data_Header.setFontName("Arial");
+	    style_Data_Header.setFont(font_Data_Header);	    
+	    
+	    
+	    CellStyle style_title = workbooktest.createCellStyle();
+	    style_title.setAlignment(HSSFCellStyle.ALIGN_CENTER);
+	    style_title.setVerticalAlignment(HSSFCellStyle.VERTICAL_CENTER);
+	    style_title.setBorderBottom(CellStyle.BORDER_THIN);
+	    style_title.setBorderTop(CellStyle.BORDER_THIN);
+	    style_title.setBorderRight(CellStyle.BORDER_THIN);
+	    style_title.setBorderLeft(CellStyle.BORDER_THIN);
+	    
+	    Font font_title = workbooktest.createFont();
+	    font_title.setFontHeightInPoints((short)12);
+	    font_title.setFontName("Arial");
+	    style_title.setFont(font_header);
+	    
+	    
+	    CellStyle stylesubheader = workbooktest.createCellStyle();
+	    stylesubheader = workbooktest.createCellStyle();
+	    stylesubheader.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
+	    stylesubheader.setFillPattern(CellStyle.SOLID_FOREGROUND);
+	    
+	    Font font_subheader = workbooktest.createFont();
+	    font_subheader.setFontHeightInPoints((short)8);
+	    font_subheader.setFontName("Arial");
+	    font_subheader.setBold(true);
+	    stylesubheader.setFont(font_subheader);
+	    
+	    //https://poi.apache.org/spreadsheet/quick-guide.html
+        for (int excelRowNUM = 0; excelRowNUM < MaxRowNumber; excelRowNUM++) {
+        	Row rowtest = sheettest.createRow(excelRowNUM);
+        	for (int i = 0; i < ConnectionsOBJECTPORT.size(); i=i+3) {
+        		
+         		//Header excel page
+        		if (excelRowNUM == ROW_HEADER_MAPPING_TITLE && i == 0 ){
+        			//System.out.println("rownumber ROW_HEADER_MAPPING_TITLE : " + excelRowNUM + " : " + i );
+        			
+        			// merge (0) 1-9
+        			//
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,MaxColumnNumber));
+        			Cell celltest = rowtest.createCell(excelRowNUM);
+        			celltest.setCellValue(FolderNAME.get(0));
+        			celltest.setCellStyle(style_title);
+        		}
+        		if (excelRowNUM == ROW_HEADER_MAPPING_HEADER_WORKFLOWS  && i == 0 ){
+        			//System.out.println("rownumber ROW_HEADER_MAPPING_HEADER_WORKFLOWS : " + excelRowNUM + " : " + i );
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("Folder");
+        			celltest1.setCellStyle(stylecenter);
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,one_fourt_div+xml_left_offset+1,((one_fourt_div)*2)+xml_left_offset+1));
+        			Cell celltest2 = rowtest.createCell(4);
+        			celltest2.setCellValue("Workflow");
+        			celltest2.setCellStyle(stylecenter);
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*2)+xml_left_offset+2),(one_fourt_div*3)+xml_left_offset+2));
+        			Cell celltest3 = rowtest.createCell(7);
+        			celltest3.setCellValue("Session");
+        			celltest3.setCellStyle(stylecenter);
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*3)+xml_left_offset+3),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(10);
+        			celltest4.setCellValue("Mapping");
+        			celltest4.setCellStyle(stylecenter);
+        		}        		
+        		if (excelRowNUM == ROW_HEADER_MAPPING_DATA_WORKFLOWS && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue(FolderNAME.get(0));
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,one_fourt_div+xml_left_offset+1,((one_fourt_div)*2)+xml_left_offset+1));
+        			Cell celltest2 = rowtest.createCell(4);
+        			celltest2.setCellValue(WorkflowNAME.get(0));
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*2)+xml_left_offset+2),(one_fourt_div*3)+xml_left_offset+2));
+        			Cell celltest3 = rowtest.createCell(7);
+        			celltest3.setCellValue(SessionNAME.get(0));
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*3)+xml_left_offset+3),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(10);
+        			celltest4.setCellValue(MappingNAME.get(0));
+        			       			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_OUTLINE && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("Outline");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,(one_fourt_div+xml_left_offset+1),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(4);
+        			celltest4.setCellValue(WorkflowDESCRIPTION.get(0));
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_PARAMETER_FILE && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("Parameter File");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,(one_fourt_div+xml_left_offset+1),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(4);
+        			celltest4.setCellValue("Place of parameterfile");       			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_HEADER_SOURCE_TARGET && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,one_fourt_div+xml_left_offset+1,((one_fourt_div)*2)+xml_left_offset+1));
+        			Cell celltest2 = rowtest.createCell(4);
+        			celltest2.setCellValue("TableName / FileName");
+ 
+        			//sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*2)+xml_left_offset+2),(one_fourt_div*2)+xml_left_offset+2));
+        			Cell celltest3 = rowtest.createCell(7);
+        			celltest3.setCellValue("Type");
+        			celltest3.setCellStyle(stylenormal);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*2)+xml_left_offset+3),(one_fourt_div*3)+xml_left_offset+2));
+        			Cell celltest4 = rowtest.createCell(8);
+        			celltest4.setCellValue("Connector");
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*3)+xml_left_offset+3),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest5 = rowtest.createCell(10);
+        			celltest5.setCellValue("Comments");        			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_SOURCES && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("Source : ");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,one_fourt_div+xml_left_offset+1,((one_fourt_div)*2)+xml_left_offset+1));
+        			Cell celltest2 = rowtest.createCell(4);
+        			celltest2.setCellValue("TableName / FileName");
+ 
+        			//sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*2)+xml_left_offset+2),(one_fourt_div*2)+xml_left_offset+2));
+        			Cell celltest3 = rowtest.createCell(7);
+        			celltest3.setCellValue("Type");
+        			celltest3.setCellStyle(stylenormal);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*2)+xml_left_offset+3),(one_fourt_div*3)+xml_left_offset+2));
+        			Cell celltest4 = rowtest.createCell(8);
+        			celltest4.setCellValue("Connector");
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*3)+xml_left_offset+3),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest5 = rowtest.createCell(10);
+        			celltest5.setCellValue("Comments");          			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_TARGETS && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("Target : ");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,one_fourt_div+xml_left_offset+1,((one_fourt_div)*2)+xml_left_offset+1));
+        			Cell celltest2 = rowtest.createCell(4);
+        			celltest2.setCellValue("TableName / FileName");
+ 
+        			//sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*2)+xml_left_offset+2),(one_fourt_div*2)+xml_left_offset+2));
+        			Cell celltest3 = rowtest.createCell(7);
+        			celltest3.setCellValue("Type");
+        			celltest3.setCellStyle(stylenormal);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*2)+xml_left_offset+3),(one_fourt_div*3)+xml_left_offset+2));
+        			Cell celltest4 = rowtest.createCell(8);
+        			celltest4.setCellValue("Connector");
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,((one_fourt_div*3)+xml_left_offset+3),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest5 = rowtest.createCell(10);
+        			celltest5.setCellValue("Comments");         			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_JOIN_FILTER_CONDITION && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("Join/Filter condition");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,(one_fourt_div+xml_left_offset+1),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(4);
+        			celltest4.setCellValue("SQL code");    			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_JOIN_SOURCE_EXTRACTION && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("Source Extraction SQL");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,(one_fourt_div+xml_left_offset+1),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(4);
+        			celltest4.setCellValue("SQL code");    			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_PRESQL && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("ETL Pre-session SQL");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,(one_fourt_div+xml_left_offset+1),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(4);
+        			celltest4.setCellValue("SQL code");    			        			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_POSTSQL && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("ETL post-session SQL");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,(one_fourt_div+xml_left_offset+1),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(4);
+        			celltest4.setCellValue("SQL code");         			
+        		} 
+        		if (excelRowNUM == ROW_HEADER_MAPPING_COMMENT && i == 0 ){
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,one_fourt_div+xml_left_offset));
+        			Cell celltest1 = rowtest.createCell(1);
+        			celltest1.setCellValue("comment");
+        			celltest1.setCellStyle(stylesubheader);
+        			
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,(one_fourt_div+xml_left_offset+1),(one_fourt_div*4)+xml_left_offset+one_fourt_rest));
+        			Cell celltest4 = rowtest.createCell(4);
+        			celltest4.setCellValue("text  ");         			
+        		} 
+
+        		if (excelRowNUM == ROW_HEADER_DATA_TITLE && i == 0 ){
+        			// merge (0) 1-9
+        			//
+        			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,xml_left_offset,MaxColumnNumber));
+        			Cell celltest5 = rowtest.createCell(1);
+        			celltest5.setCellValue("Mapping header");
+        			celltest5.setCellStyle(style_Data_Header);
+        		}
+
+        		if (excelRowNUM == 15 && i == 0){
+        			int collumnsSets = MaxColumnCheck/3;
+        			int subHeaderCounter = 0;
+        			for (int loop = 0; loop < MaxColumnCheck ; loop=loop+3){
+        				++subHeaderCounter;
+        				System.out.println(" ..subHeaderCounter . " + subHeaderCounter + "    -   "+loop );
+            			sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,loop+xml_left_offset,loop+2+xml_left_offset));
+            			Cell celltest1 = rowtest.createCell(1+loop);
+            			celltest1.setCellValue("Object");
+            			celltest1.setCellStyle(stylecenterSH);
+        			}
+        			//sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,0+xml_left_offset,2+xml_left_offset));
+        			//Cell celltest1 = rowtest.createCell(1);
+        			//celltest1.setCellValue("first");
+        			//celltest1.setCellStyle(stylesubheader);
+        			//sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,3+xml_left_offset,5+xml_left_offset));
+        			//Cell celltest2 = rowtest.createCell(2);
+        			//celltest2.setCellValue("second");
+        			//celltest2.setCellStyle(stylesubheader);       			
+        			//sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,6+xml_left_offset,8+xml_left_offset));
+        			//Cell celltest3 = rowtest.createCell(3);
+        			//celltest3.setCellValue("thirt");
+        			//celltest3.setCellStyle(stylesubheader);       			
+        			//sheettest.addMergedRegion(new CellRangeAddress(excelRowNUM,excelRowNUM,9+xml_left_offset,11+xml_left_offset));
+        			//Cell celltest4 = rowtest.createCell(4);
+        			//celltest4.setCellValue("four");
+        			//celltest4.setCellStyle(stylesubheader);       			
+
+        		}
+
+        		if (excelRowNUM == 16  ){
+         			if (excelRowNUM+1 == Integer.parseInt(ConnectionsOBJECTPORT.get(i+1))){
+        				System.out.println("row number : " + excelRowNUM);
+        				Cell celltest = rowtest.createCell(Integer.parseInt(ConnectionsOBJECTPORT.get(i)));
+        				celltest.setCellValue("Field Name");
+        				celltest.setCellStyle(style_Data_Header);
+        			}
+        			if (excelRowNUM+1 == Integer.parseInt(ConnectionsOBJECTNAME.get(i+1))){
+        				Cell celltest = rowtest.createCell(Integer.parseInt(ConnectionsOBJECTNAME.get(i)));
+        				celltest.setCellValue("Naam Object");
+        				celltest.setCellStyle(style_Data_Header);
+        			}
+        			if (excelRowNUM+1 == Integer.parseInt(ConnectionsOBJECTTYPE.get(i+1))){
+        				Cell celltest = rowtest.createCell(Integer.parseInt(ConnectionsOBJECTTYPE.get(i)));
+        				celltest.setCellValue("Type object");
+        				celltest.setCellStyle(style_Data_Header);
+        			}
+        		}
+
+        		
+        		//Data mapping lineage 
+        		//get the connector data from the recursive loop and create a table in the Excel sheet
+        			if (excelRowNUM == Integer.parseInt(ConnectionsOBJECTPORT.get(i+1))){
+        				System.out.println("row number : " + excelRowNUM);
+        				Cell celltest = rowtest.createCell(Integer.parseInt(ConnectionsOBJECTPORT.get(i)));
+        				celltest.setCellValue(ConnectionsOBJECTPORT.get(i+2));
+        				celltest.setCellStyle(stylenormal);
+        				if ("NOT CONNECTED".equals(ConnectionsOBJECTPORT.get(i+2))){
+        				celltest.setCellStyle(styletest);
+        				}
+        			}
+        			if (excelRowNUM == Integer.parseInt(ConnectionsOBJECTNAME.get(i+1))){
+        				Cell celltest = rowtest.createCell(Integer.parseInt(ConnectionsOBJECTNAME.get(i)));
+        				celltest.setCellValue(ConnectionsOBJECTNAME.get(i+2));
+        				celltest.setCellStyle(stylenormal);
+        				if ("NOT CONNECTED".equals(ConnectionsOBJECTPORT.get(i+2))){
+        				celltest.setCellStyle(styletest);
+        				}
+        			}
+        			if (excelRowNUM == Integer.parseInt(ConnectionsOBJECTTYPE.get(i+1))){
+        				Cell celltest = rowtest.createCell(Integer.parseInt(ConnectionsOBJECTTYPE.get(i)));
+        				celltest.setCellValue(ConnectionsOBJECTTYPE.get(i+2));
+        				celltest.setCellStyle(stylenormal);
+        				if ("NOT CONNECTED".equals(ConnectionsOBJECTPORT.get(i+2))){
+        				celltest.setCellStyle(styletest);
+        				}
+        			}
+           	}
+        }
+		try {
+			setBordersToMergedCells(workbooktest, sheettest);
+		    FileOutputStream outputStreamtest = new FileOutputStream(FILE_NAMETEST);
+			for (int i = 0; i < sheettest.getRow(sheettest.getLastRowNum()).getPhysicalNumberOfCells()+8 ; ++i) {
+				sheettest.autoSizeColumn(i);
+			}
+			workbooktest.write(outputStreamtest); 
+		    workbooktest.close();
+		    System.out.println("excel test file created");
+		} catch (FileNotFoundException e) {
+		    e.printStackTrace();
+		} catch (IOException e) {
+		    e.printStackTrace();
+		}
+   } //main function
+	
+	@SuppressWarnings("deprecation")
+	private static void setBordersToMergedCells(HSSFWorkbook workBook, HSSFSheet sheet) {
+		  List<CellRangeAddress> mergedRegions = sheet.getMergedRegions();
+		  for (CellRangeAddress rangeAddress : mergedRegions) {
+		    RegionUtil.setBorderTop(CellStyle.BORDER_THIN, rangeAddress, sheet, workBook);
+		    RegionUtil.setBorderLeft(CellStyle.BORDER_THIN, rangeAddress, sheet, workBook);
+		    RegionUtil.setBorderRight(CellStyle.BORDER_THIN, rangeAddress, sheet, workBook);
+		    RegionUtil.setBorderBottom(CellStyle.BORDER_THIN, rangeAddress, sheet, workBook);
+		  }
+		}
+	
+} //class
+	
